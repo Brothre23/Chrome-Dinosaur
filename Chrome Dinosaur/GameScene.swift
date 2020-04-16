@@ -93,12 +93,15 @@ class GameScene: SKScene {
     
     func newBird() -> SKSpriteNode {
         let newBird = SKSpriteNode(texture: dinoTexture.textureNamed("bird_2.png"))
-        let yPosition = CGFloat.random(in: size.height / 2...size.height)
+        newBird.setScale(0.75)
+        let yPosition = CGFloat.random(in: size.height / 2 + newBird.size.height / 2...size.height - newBird.size.height / 2)
         
-        let flyOnce = SKAction.animate(with: [dinoTexture.textureNamed("bird_1.png"), dinoTexture.textureNamed("bird_2.png")], timePerFrame: 0.1)
+        let flyOnce = SKAction.sequence([SKAction.moveBy(x: 0, y: -12, duration: 0), SKAction.setTexture(dinoTexture.textureNamed("bird_1.png"), resize: true), SKAction.wait(forDuration: 0.2),
+            SKAction.moveBy(x: 0, y: 12, duration: 0),
+            SKAction.setTexture(dinoTexture.textureNamed("bird_2.png"), resize: true),
+            SKAction.wait(forDuration: 0.2)])
         let flyForever = SKAction.repeatForever(flyOnce)
         
-        newBird.setScale(0.75)
         newBird.position = CGPoint(x: size.width + newBird.size.width / 2, y: yPosition)
         newBird.run(flyForever)
         newBird.name = "enemy"
@@ -115,7 +118,7 @@ class GameScene: SKScene {
         backgroundColor = SKColor(displayP3Red: 1.0, green: 1.0, blue: 1.0, alpha: 1.0)
         
         dinoTexture = SKTextureAtlas(named: "dinosaur")
-        moveSpeed = 10
+        moveSpeed = 5
         currentScene = .desert
     }
     
