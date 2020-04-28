@@ -24,6 +24,8 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
     
     var walkForever:SKAction!
     
+    var lastTouchTime:CFTimeInterval!
+    
     enum Scene {
         case desert
         case metro
@@ -134,8 +136,10 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
         self.physicsWorld.contactDelegate = self
         
         dinoTexture = SKTextureAtlas(named: "dinosaur")
-        moveSpeed = 2
+        moveSpeed = 5
         currentScene = .desert
+        lastTouchTime = 0
+        self.isPaused = false
     }
     
     override func didMove(to view: SKView) {
@@ -148,7 +152,7 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
             self.addChild(landscape)
         }
         
-        let walkOnce = SKAction.animate(with: [dinoTexture.textureNamed("walk_1.png"), dinoTexture.textureNamed("walk_2.png")], timePerFrame: 0.1)
+        let walkOnce = SKAction.animate(with: [dinoTexture.textureNamed("walk_1.png"), dinoTexture.textureNamed("walk_2.png")], timePerFrame: 0.2)
         walkForever = SKAction.repeatForever(walkOnce)
         
         dinosaur = SKSpriteNode(texture: dinoTexture.textureNamed("walk_2.png"))
@@ -166,7 +170,6 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
         dinosaur.physicsBody?.collisionBitMask = 0
         
         dinosaur.run(walkForever, withKey: "dinosaurWalk")
-        
         self.addChild(dinosaur)
         
         newEnemy()
@@ -212,16 +215,26 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
             self.isPaused.toggle()
         }
         else {
-            dinosaur.removeAction(forKey: "dinosaurWalk")
-            dinosaur.run(SKAction.sequence([SKAction.setTexture(dinoTexture.textureNamed("jump.png")), SKAction.moveBy(x: 0, y: 150, duration: 0.5), SKAction.moveBy(x: 0, y: -150, duration: 0.5), SKAction.setTexture(dinoTexture.textureNamed("walk_2.png"))]))
-            DispatchQueue.main.asyncAfter(deadline: .now() + 1) {
-                self.dinosaur.run(self.walkForever, withKey: "dinosaurWalk")
+            let setJumpTexture = SKAction.setTexture(dinoTexture.textureNamed("jump.png"))
+            let setWalkTexture = SKAction.setTexture(dinoTexture.textureNamed("walk_2.png"))
+            let jumpUp = SKAction.moveBy(x: 0, y: 150, duration: 0.5)
+            let jumpDown = SKAction.moveBy(x: 0, y: -150, duration: 0.25)
+            
+            if (CACurrentMediaTime() - lastTouchTime < 0.75) {
+                return
             }
+            
+            lastTouchTime = CACurrentMediaTime()
+            
+            dinosaur.removeAction(forKey: "dinosaurWalk")
+            dinosaur.run(SKAction.sequence([setJumpTexture, jumpUp, jumpDown, setWalkTexture]), completion: {
+                self.dinosaur.run(self.walkForever, withKey: "dinosaurWalk")
+            })
         }
     }
     
     func didBegin(_ contact: SKPhysicsContact) {
-//        self.isPaused = true
+//        self.isPaused.toggle()
 //
 //        let gameOverLabel = SKSpriteNode(imageNamed: "GG.png")
 //        gameOverLabel.position = CGPoint(x: self.size.width / 2, y: self.size.height / 2)
@@ -232,7 +245,5 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
 //
 //        self.addChild(gameOverLabel)
 //        self.addChild(restartLabel)
-//
-//        dinosaur.run(SKAction.setTexture(dinoTexture.textureNamed("jump.png")))
     }
 }
