@@ -17,14 +17,13 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
     var moveSpeed:CGFloat!
     var currentScene:Scene!
     var enemyType:Bool!
+    var lastTouchTime:CFTimeInterval!
     
     let characterCategory: UInt32 = 0x1 << 0
     let flyingEnemyCategory: UInt32 = 0x1 << 1
     let landEnemyCategory: UInt32 = 0x1 << 2
     
     var walkForever:SKAction!
-    
-    var lastTouchTime:CFTimeInterval!
     
     enum Scene {
         case desert
@@ -60,6 +59,14 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
                 break
             }
             
+            enemy.physicsBody = SKPhysicsBody(rectangleOf: CGSize(width: enemy.size.width, height: enemy.size.height))
+            // enemy.physicsBody = SKPhysicsBody(texture: enemy.texture!, size: enemy.texture!.size())
+            enemy.physicsBody?.usesPreciseCollisionDetection = true
+            enemy.physicsBody?.affectedByGravity = false
+            enemy.physicsBody?.contactTestBitMask = self.characterCategory
+            enemy.physicsBody?.collisionBitMask = 0
+            enemy.name = "enemy"
+            
             self.addChild(enemy)
         }
         if !self.isPaused {
@@ -87,23 +94,15 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
         }
         
         newCactus.setScale(0.75)
-        newCactus.anchorPoint = CGPoint(x: 0, y: 0)
-        newCactus.position = CGPoint(x: size.width, y: landscape.size.height / 4)
-        newCactus.name = "enemy"
-        
-        newCactus.physicsBody = SKPhysicsBody(rectangleOf: CGSize(width: newCactus.size.width, height: newCactus.size.height))
-        newCactus.physicsBody?.affectedByGravity = false
-        
+        newCactus.position = CGPoint(x: size.width + newCactus.size.width / 2, y: landscape.size.height / 4 + newCactus.size.height / 2)
         newCactus.physicsBody?.categoryBitMask = landEnemyCategory
-        newCactus.physicsBody?.contactTestBitMask = characterCategory
-        newCactus.physicsBody?.collisionBitMask = 0
         
         return newCactus
     }
     
     func newBird() -> SKSpriteNode {
         let newBird = SKSpriteNode(texture: dinoTexture.textureNamed("bird_2.png"))
-        newBird.setScale(0.75)
+
         let yPosition = CGFloat.random(in: landscape.size.height + newBird.size.height / 2...size.height / 2 - newBird.size.height / 2)
         
         let flyOnce = SKAction.sequence([SKAction.moveBy(x: 0, y: -12, duration: 0), SKAction.setTexture(dinoTexture.textureNamed("bird_1.png"), resize: true), SKAction.wait(forDuration: 0.2),
@@ -112,16 +111,10 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
             SKAction.wait(forDuration: 0.2)])
         let flyForever = SKAction.repeatForever(flyOnce)
         
-        newBird.position = CGPoint(x: size.width, y: yPosition)
+        newBird.setScale(0.75)
+        newBird.position = CGPoint(x: size.width + newBird.size.width / 2, y: yPosition)
         newBird.run(flyForever)
-        newBird.name = "enemy"
-        
-        newBird.physicsBody = SKPhysicsBody(rectangleOf: CGSize(width: newBird.size.width, height: newBird.size.height))
-        newBird.physicsBody?.affectedByGravity = false
-        
         newBird.physicsBody?.categoryBitMask = flyingEnemyCategory
-        newBird.physicsBody?.contactTestBitMask = characterCategory
-        newBird.physicsBody?.collisionBitMask = 0
         
         return newBird
     }
@@ -132,11 +125,11 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
     
     override init(size: CGSize) {
         super.init(size: size)
-        self.backgroundColor = SKColor(displayP3Red: 1.0, green: 1.0, blue: 1.0, alpha: 1.0)
+        self.backgroundColor = SKColor(displayP3Red: 0.5, green: 0.5, blue: 0.5, alpha: 1.0)
         self.physicsWorld.contactDelegate = self
         
         dinoTexture = SKTextureAtlas(named: "dinosaur")
-        moveSpeed = 5
+        moveSpeed = 10
         currentScene = .desert
         lastTouchTime = 0
         self.isPaused = false
@@ -158,12 +151,12 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
         dinosaur = SKSpriteNode(texture: dinoTexture.textureNamed("walk_2.png"))
         
         dinosaur.setScale(0.75)
-        dinosaur.anchorPoint = CGPoint(x: 0.5, y: 0.0)
-        dinosaur.position = CGPoint(x: 100, y: landscape.size.height / 4)
+        dinosaur.position = CGPoint(x: 100, y: landscape.size.height / 4 + dinosaur.size.height / 2)
         dinosaur.name = "dinosaur"
         
         dinosaur.physicsBody = SKPhysicsBody(rectangleOf: CGSize(width: dinosaur.size.width, height: dinosaur.size.height))
         dinosaur.physicsBody?.affectedByGravity = false
+        dinosaur.physicsBody?.usesPreciseCollisionDetection = true
         
         dinosaur.physicsBody?.categoryBitMask = characterCategory
         dinosaur.physicsBody?.contactTestBitMask = flyingEnemyCategory | landEnemyCategory
@@ -211,7 +204,6 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
                 node.removeFromParent()
             }
             
-            dinosaur.run(SKAction.setTexture(dinoTexture.textureNamed("walk_2.png")))
             self.isPaused.toggle()
         }
         else {
@@ -234,16 +226,16 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
     }
     
     func didBegin(_ contact: SKPhysicsContact) {
-//        self.isPaused.toggle()
-//
-//        let gameOverLabel = SKSpriteNode(imageNamed: "GG.png")
-//        gameOverLabel.position = CGPoint(x: self.size.width / 2, y: self.size.height / 2)
-//        gameOverLabel.name = "GG"
-//        let restartLabel = SKSpriteNode(imageNamed: "restart.png")
-//        restartLabel.position = CGPoint(x: self.size.width / 2, y: gameOverLabel.position.y - 100)
-//        restartLabel.name = "GG"
-//
-//        self.addChild(gameOverLabel)
-//        self.addChild(restartLabel)
+        self.isPaused.toggle()
+
+        let gameOverLabel = SKSpriteNode(imageNamed: "GG.png")
+        gameOverLabel.position = CGPoint(x: self.size.width / 2, y: self.size.height / 2)
+        gameOverLabel.name = "GG"
+        let restartLabel = SKSpriteNode(imageNamed: "restart.png")
+        restartLabel.position = CGPoint(x: self.size.width / 2, y: gameOverLabel.position.y - 100)
+        restartLabel.name = "GG"
+
+        self.addChild(gameOverLabel)
+        self.addChild(restartLabel)
     }
 }

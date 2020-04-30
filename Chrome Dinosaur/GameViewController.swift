@@ -21,7 +21,7 @@ class GameViewController: UIViewController {
         super.viewDidLoad()
         
         let skView = view as! SKView
-        skView.ignoresSiblingOrder = true
+        // skView.ignoresSiblingOrder = true
         skView.showsFPS = true
         skView.showsNodeCount = true
         
