@@ -31,15 +31,6 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
         case outerspace
     }
     
-    enum Cactus: CaseIterable {
-        case small_1
-        case small_2
-        case small_3
-        case big_1
-        case big_2
-        case big_4
-    }
-    
     func newEnemy() {
         let wait = SKAction.wait(forDuration: 2, withRange: 2)
         var enemy:SKSpriteNode!
@@ -50,73 +41,42 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
             switch self.currentScene {
             case .desert:
                 if self.enemyType {
-                    enemy = self.newCactus()
+                    enemy = Enemy(type: "cactus")
+                    enemy.position = CGPoint(x: self.size.width + enemy.size.width / 2, y: self.landscape.size.height / 4 + enemy.size.height / 2)
                 }
                 else {
-                    enemy = self.newBird()
+                    enemy = Enemy(type: "bird")
+                    let yPosition = CGFloat.random(in: self.landscape.size.height + enemy.size.height / 2...self.size.height / 2 - enemy.size.height / 2)
+                    enemy.position = CGPoint(x: self.size.width + enemy.size.width / 2, y: yPosition)
                 }
             default:
                 break
             }
-            
-            enemy.physicsBody = SKPhysicsBody(rectangleOf: CGSize(width: enemy.size.width, height: enemy.size.height))
-            // enemy.physicsBody = SKPhysicsBody(texture: enemy.texture!, size: enemy.texture!.size())
-            enemy.physicsBody?.usesPreciseCollisionDetection = true
-            enemy.physicsBody?.affectedByGravity = false
-            enemy.physicsBody?.contactTestBitMask = self.characterCategory
-            enemy.physicsBody?.collisionBitMask = 0
-            enemy.name = "enemy"
-            
             self.addChild(enemy)
         }
-        if !self.isPaused {
-            self.run(SKAction.repeatForever(SKAction.sequence([wait, spawn])))
-        }
+        self.run(SKAction.repeatForever(SKAction.sequence([wait, spawn])))
     }
     
-    func newCactus() -> SKSpriteNode {
-        let randomCactus = Cactus.allCases.randomElement()!
-        var newCactus:SKSpriteNode!
+    func setupDinosaur() {
+        let walkOnce = SKAction.animate(with: [dinoTexture.textureNamed("walk_1.png"), dinoTexture.textureNamed("walk_2.png")], timePerFrame: 0.1)
+        walkForever = SKAction.repeatForever(walkOnce)
         
-        switch randomCactus {
-        case .small_1:
-            newCactus = SKSpriteNode(texture: dinoTexture.textureNamed("cactus_small_1.png"))
-        case .small_2:
-            newCactus = SKSpriteNode(texture: dinoTexture.textureNamed("cactus_small_2.png"))
-        case .small_3:
-            newCactus = SKSpriteNode(texture: dinoTexture.textureNamed("cactus_small_3.png"))
-        case .big_1:
-            newCactus = SKSpriteNode(texture: dinoTexture.textureNamed("cactus_big_1.png"))
-        case .big_2:
-            newCactus = SKSpriteNode(texture: dinoTexture.textureNamed("cactus_big_2.png"))
-        case .big_4:
-            newCactus = SKSpriteNode(texture: dinoTexture.textureNamed("cactus_big_4.png"))
-        }
+        dinosaur = SKSpriteNode(texture: dinoTexture.textureNamed("walk_2.png"))
         
-        newCactus.setScale(0.75)
-        newCactus.position = CGPoint(x: size.width + newCactus.size.width / 2, y: landscape.size.height / 4 + newCactus.size.height / 2)
-        newCactus.physicsBody?.categoryBitMask = landEnemyCategory
+        dinosaur.setScale(0.75)
+        dinosaur.position = CGPoint(x: 100, y: landscape.size.height / 4 + dinosaur.size.height / 2)
+        dinosaur.name = "dinosaur"
         
-        return newCactus
-    }
-    
-    func newBird() -> SKSpriteNode {
-        let newBird = SKSpriteNode(texture: dinoTexture.textureNamed("bird_2.png"))
-
-        let yPosition = CGFloat.random(in: landscape.size.height + newBird.size.height / 2...size.height / 2 - newBird.size.height / 2)
+        dinosaur.physicsBody = SKPhysicsBody(rectangleOf: CGSize(width: dinosaur.size.width, height: dinosaur.size.height))
+        // dinosaur.physicsBody = SKPhysicsBody(texture: dinosaur.texture!, size: dinosaur.texture!.size())
+        dinosaur.physicsBody?.affectedByGravity = false
+        dinosaur.physicsBody?.usesPreciseCollisionDetection = true
         
-        let flyOnce = SKAction.sequence([SKAction.moveBy(x: 0, y: -12, duration: 0), SKAction.setTexture(dinoTexture.textureNamed("bird_1.png"), resize: true), SKAction.wait(forDuration: 0.2),
-            SKAction.moveBy(x: 0, y: 12, duration: 0),
-            SKAction.setTexture(dinoTexture.textureNamed("bird_2.png"), resize: true),
-            SKAction.wait(forDuration: 0.2)])
-        let flyForever = SKAction.repeatForever(flyOnce)
+        dinosaur.physicsBody?.categoryBitMask = characterCategory
+        dinosaur.physicsBody?.contactTestBitMask = flyingEnemyCategory | landEnemyCategory
+        dinosaur.physicsBody?.collisionBitMask = 0
         
-        newBird.setScale(0.75)
-        newBird.position = CGPoint(x: size.width + newBird.size.width / 2, y: yPosition)
-        newBird.run(flyForever)
-        newBird.physicsBody?.categoryBitMask = flyingEnemyCategory
-        
-        return newBird
+        dinosaur.run(walkForever, withKey: "dinosaurWalk")
     }
     
     required init?(coder aDecoder: NSCoder) {
@@ -144,27 +104,8 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
             
             self.addChild(landscape)
         }
-        
-        let walkOnce = SKAction.animate(with: [dinoTexture.textureNamed("walk_1.png"), dinoTexture.textureNamed("walk_2.png")], timePerFrame: 0.2)
-        walkForever = SKAction.repeatForever(walkOnce)
-        
-        dinosaur = SKSpriteNode(texture: dinoTexture.textureNamed("walk_2.png"))
-        
-        dinosaur.setScale(0.75)
-        dinosaur.position = CGPoint(x: 100, y: landscape.size.height / 4 + dinosaur.size.height / 2)
-        dinosaur.name = "dinosaur"
-        
-        dinosaur.physicsBody = SKPhysicsBody(rectangleOf: CGSize(width: dinosaur.size.width, height: dinosaur.size.height))
-        dinosaur.physicsBody?.affectedByGravity = false
-        dinosaur.physicsBody?.usesPreciseCollisionDetection = true
-        
-        dinosaur.physicsBody?.categoryBitMask = characterCategory
-        dinosaur.physicsBody?.contactTestBitMask = flyingEnemyCategory | landEnemyCategory
-        dinosaur.physicsBody?.collisionBitMask = 0
-        
-        dinosaur.run(walkForever, withKey: "dinosaurWalk")
+        setupDinosaur()
         self.addChild(dinosaur)
-        
         newEnemy()
     }
     
@@ -194,17 +135,36 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
     
     override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
         if self.isPaused {
-            self.enumerateChildNodes(withName: "GG") {
-                (node, _) in
-                node.removeFromParent()
-            }
             
-            self.enumerateChildNodes(withName: "enemy") {
-                (node, _) in
-                node.removeFromParent()
-            }
+            let touch:UITouch = touches.first!
+            let positionInScene = touch.location(in: self)
+            let touchedNode = self.nodes(at: positionInScene)
             
-            self.isPaused.toggle()
+            if !touchedNode.isEmpty
+            {
+                let name = touchedNode[0].name
+                if name == "GGButton" {
+                    let GGLabel = childNode(withName: "GGLabel")
+                    GGLabel?.removeFromParent()
+                    
+                    let GGButton = touchedNode[0]
+                    GGButton.removeFromParent()
+                    
+                    self.enumerateChildNodes(withName: "enemy") {
+                        (node, _) in
+                        node.removeFromParent()
+                    }
+                    
+                    dinosaur.removeAction(forKey: "dinosaurJump")
+                    dinosaur.position = CGPoint(x: 100, y: landscape.size.height / 4 + dinosaur.size.height / 2)
+                    dinosaur.run(walkForever, withKey: "dinosaurWalk")
+                    
+                    self.isPaused.toggle()
+                }
+            }
+            else {
+                return
+            }
         }
         else {
             let setJumpTexture = SKAction.setTexture(dinoTexture.textureNamed("jump.png"))
@@ -219,9 +179,10 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
             lastTouchTime = CACurrentMediaTime()
             
             dinosaur.removeAction(forKey: "dinosaurWalk")
-            dinosaur.run(SKAction.sequence([setJumpTexture, jumpUp, jumpDown, setWalkTexture]), completion: {
+            let completion = SKAction.run {
                 self.dinosaur.run(self.walkForever, withKey: "dinosaurWalk")
-            })
+            }
+            dinosaur.run(SKAction.sequence([setJumpTexture, jumpUp, jumpDown, setWalkTexture, completion]), withKey: "dinosaurJump")
         }
     }
     
@@ -230,10 +191,12 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
 
         let gameOverLabel = SKSpriteNode(imageNamed: "GG.png")
         gameOverLabel.position = CGPoint(x: self.size.width / 2, y: self.size.height / 2)
-        gameOverLabel.name = "GG"
+        gameOverLabel.name = "GGLabel"
         let restartLabel = SKSpriteNode(imageNamed: "restart.png")
         restartLabel.position = CGPoint(x: self.size.width / 2, y: gameOverLabel.position.y - 100)
-        restartLabel.name = "GG"
+        restartLabel.name = "GGButton"
+        
+        dinosaur.texture = dinoTexture.textureNamed("died.png")
 
         self.addChild(gameOverLabel)
         self.addChild(restartLabel)
