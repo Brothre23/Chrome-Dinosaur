@@ -10,7 +10,7 @@ import SpriteKit
 
 class Enemy: SKSpriteNode {
     
-    static let enemyTexture:SKTextureAtlas = SKTextureAtlas(named: "enemy")
+    static let enemyTexture: SKTextureAtlas = SKTextureAtlas(named: "enemy")
     static let characterCategory: UInt32 = 0x1 << 0
     static let flyingEnemyCategory: UInt32 = 0x1 << 1
     static let landEnemyCategory: UInt32 = 0x1 << 2

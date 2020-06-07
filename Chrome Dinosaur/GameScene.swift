@@ -7,6 +7,7 @@
 //
 
 import SpriteKit
+import UIKit
 
 class GameScene: SKScene, SKPhysicsContactDelegate {
     
@@ -18,10 +19,19 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
     var currentScene:Scene!
     var enemyType:Bool!
     var lastTouchTime:CFTimeInterval!
+    var lastEnemyTime:CFTimeInterval!
+    var lastScoreTime: CFTimeInterval!
+    var enemyWaitTime: Double!
     
     let characterCategory: UInt32 = 0x1 << 0
     let flyingEnemyCategory: UInt32 = 0x1 << 1
     let landEnemyCategory: UInt32 = 0x1 << 2
+    
+    var currentScore: Int!
+    var highScore: Int!
+    
+    var userDefault: UserDefaults!
+    var score: Score!
     
     var walkForever:SKAction!
     
@@ -29,32 +39,6 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
         case desert
         case metro
         case outerspace
-    }
-    
-    func newEnemy() {
-        let wait = SKAction.wait(forDuration: 2, withRange: 2)
-        var enemy:SKSpriteNode!
-        
-        let spawn = SKAction.run {
-            self.enemyType = Bool.random()
-            
-            switch self.currentScene {
-            case .desert:
-                if self.enemyType {
-                    enemy = Enemy(type: "cactus")
-                    enemy.position = CGPoint(x: self.size.width + enemy.size.width / 2, y: self.landscape.size.height / 4 + enemy.size.height / 2)
-                }
-                else {
-                    enemy = Enemy(type: "bird")
-                    let yPosition = CGFloat.random(in: self.landscape.size.height + enemy.size.height / 2...self.size.height / 2 - enemy.size.height / 2)
-                    enemy.position = CGPoint(x: self.size.width + enemy.size.width / 2, y: yPosition)
-                }
-            default:
-                break
-            }
-            self.addChild(enemy)
-        }
-        self.run(SKAction.repeatForever(SKAction.sequence([wait, spawn])))
     }
     
     func setupDinosaur() {
@@ -76,7 +60,7 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
         dinosaur.physicsBody?.contactTestBitMask = flyingEnemyCategory | landEnemyCategory
         dinosaur.physicsBody?.collisionBitMask = 0
         
-        dinosaur.run(walkForever, withKey: "dinosaurWalk")
+        dinosaur.run(walkForever, withKey: "dinosaur walk")
     }
     
     required init?(coder aDecoder: NSCoder) {
@@ -92,6 +76,15 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
         moveSpeed = 10
         currentScene = .desert
         lastTouchTime = 0
+        lastEnemyTime = 0
+        lastScoreTime = 0
+        currentScore = Int(-moveSpeed)
+        
+        userDefault = UserDefaults()
+        highScore = userDefault.integer(forKey: "high score")
+        
+        score = Score(parentScene: self)
+        
         self.isPaused = false
     }
     
@@ -104,19 +97,52 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
             
             self.addChild(landscape)
         }
+        
         setupDinosaur()
         self.addChild(dinosaur)
-        newEnemy()
+        
+        score.updateHighScore()
     }
     
     override func update(_ currentTime: TimeInterval) {
+        enemyWaitTime = Double.random(in: 1...3)
+        if currentTime - lastEnemyTime > enemyWaitTime {
+            var enemy:SKSpriteNode!
+            enemyType = Bool.random()
+
+            switch currentScene {
+            case .desert:
+                if self.enemyType {
+                    enemy = Enemy(type: "cactus")
+                    enemy.position = CGPoint(x: self.size.width + enemy.size.width / 2, y: self.landscape.size.height / 4 + enemy.size.height / 2)
+                }
+                else {
+                    enemy = Enemy(type: "bird")
+                    let yPosition = CGFloat.random(in: self.landscape.size.height + enemy.size.height / 2...self.size.height / 2 - enemy.size.height / 2)
+                    enemy.position = CGPoint(x: self.size.width + enemy.size.width / 2, y: yPosition)
+                }
+            default:
+                break
+            }
+            self.addChild(enemy)
+            
+            lastEnemyTime = currentTime
+        }
+        
+        if currentTime - lastScoreTime > 0.5 {
+            currentScore += Int(moveSpeed)
+            score.updateScore()
+            
+            lastScoreTime = currentTime
+        }
+        
         self.enumerateChildNodes(withName: "landscape") {
             (node, stop) in
             
             let newLandscape = node as! SKSpriteNode
             newLandscape.position.x -= self.moveSpeed
             
-            if (newLandscape.position.x <= -newLandscape.size.width) {
+            if newLandscape.position.x <= -newLandscape.size.width {
                 newLandscape.position.x += newLandscape.size.width * 2
             }
         }
@@ -127,7 +153,7 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
             let enemy = node as! SKSpriteNode
             enemy.position.x -= self.moveSpeed
             
-            if (enemy.position.x <= -enemy.size.width / 2) {
+            if enemy.position.x <= -enemy.size.width / 2 {
                 enemy.removeFromParent()
             }
         }
@@ -155,34 +181,38 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
                         node.removeFromParent()
                     }
                     
-                    dinosaur.removeAction(forKey: "dinosaurJump")
+                    currentScore = Int(-moveSpeed)
+                    score.updateHighScore()
+                    score.reset()
+                    
+                    dinosaur.removeAction(forKey: "dinosaur jump")
                     dinosaur.position = CGPoint(x: 100, y: landscape.size.height / 4 + dinosaur.size.height / 2)
-                    dinosaur.run(walkForever, withKey: "dinosaurWalk")
+                    dinosaur.run(walkForever, withKey: "dinosaur walk")
                     
                     self.isPaused.toggle()
                 }
-            }
-            else {
-                return
+                else {
+                    return
+                }
             }
         }
         else {
-            let setJumpTexture = SKAction.setTexture(dinoTexture.textureNamed("jump.png"))
-            let setWalkTexture = SKAction.setTexture(dinoTexture.textureNamed("walk_2.png"))
-            let jumpUp = SKAction.moveBy(x: 0, y: 150, duration: 0.5)
-            let jumpDown = SKAction.moveBy(x: 0, y: -150, duration: 0.25)
-            
-            if (CACurrentMediaTime() - lastTouchTime < 0.75) {
+            if CACurrentMediaTime() - lastTouchTime < 0.6 {
                 return
             }
             
             lastTouchTime = CACurrentMediaTime()
             
-            dinosaur.removeAction(forKey: "dinosaurWalk")
+            let setJumpTexture = SKAction.setTexture(dinoTexture.textureNamed("jump.png"))
+            let setWalkTexture = SKAction.setTexture(dinoTexture.textureNamed("walk_2.png"))
+            let jumpUp = SKAction.moveBy(x: 0, y: 150, duration: 0.4)
+            let jumpDown = SKAction.moveBy(x: 0, y: -150, duration: 0.2)
+            
+            dinosaur.removeAction(forKey: "dinosaur walk")
             let completion = SKAction.run {
-                self.dinosaur.run(self.walkForever, withKey: "dinosaurWalk")
+                self.dinosaur.run(self.walkForever, withKey: "dinosaur walk")
             }
-            dinosaur.run(SKAction.sequence([setJumpTexture, jumpUp, jumpDown, setWalkTexture, completion]), withKey: "dinosaurJump")
+            dinosaur.run(SKAction.sequence([setJumpTexture, jumpUp, jumpDown, setWalkTexture, completion]), withKey: "dinosaur jump")
         }
     }
     
@@ -200,5 +230,10 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
 
         self.addChild(gameOverLabel)
         self.addChild(restartLabel)
+        
+        if currentScore > highScore {
+            highScore = currentScore
+            userDefault.set(currentScore, forKey: "high score")
+        }
     }
 }
