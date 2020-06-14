@@ -27,7 +27,6 @@ class Enemy: SKSpriteNode {
     }
     
     init(type: String) {
-        
         let texture = Enemy.enemyTexture.textureNamed("Sprite")
         super.init(texture: texture, color: UIColor.clear, size: texture.size())
         
@@ -61,6 +60,7 @@ class Enemy: SKSpriteNode {
                 self.texture = tempTexture
                 self.size = tempTexture.size()
             }
+            self.physicsBody = SKPhysicsBody(rectangleOf: CGSize(width: self.size.width, height: self.size.height))
             self.physicsBody?.categoryBitMask = Enemy.landEnemyCategory
             
         case "bird":
@@ -75,19 +75,18 @@ class Enemy: SKSpriteNode {
             self.size = tempTexture.size()
             
             self.run(flyForever)
+            
+            self.physicsBody = SKPhysicsBody(rectangleOf: CGSize(width: self.size.width, height: self.size.height))
             self.physicsBody?.categoryBitMask = Enemy.flyingEnemyCategory
             
         default:
             break
         }
-        
-        self.setScale(0.75)
-        self.physicsBody = SKPhysicsBody(rectangleOf: CGSize(width: self.size.width, height: self.size.height))
+
         self.physicsBody?.usesPreciseCollisionDetection = true
         self.physicsBody?.affectedByGravity = false
         self.physicsBody?.contactTestBitMask = Enemy.characterCategory
         self.physicsBody?.collisionBitMask = 0
-
         self.name = "enemy"
     }
     

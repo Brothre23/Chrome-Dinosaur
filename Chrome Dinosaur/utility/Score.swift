@@ -8,10 +8,6 @@
 
 import SpriteKit
 
-extension String  {
-    var digits: [Int] { self.compactMap{ $0.wholeNumberValue } }
-}
-
 class Score {
     
     static let scoreTexture: SKTextureAtlas = SKTextureAtlas(named: "score")
@@ -21,7 +17,6 @@ class Score {
     var currentScoreLabel: [SKSpriteNode] = []
     
     var labelHeight: CGFloat!
-    var isInitial: Bool!
     
     var parentScene: GameScene!
     
@@ -30,7 +25,6 @@ class Score {
         self.parentScene = parentScene
         
         hiLabel = SKSpriteNode(texture: Score.scoreTexture.textureNamed("HI"))
-        isInitial = true
         // init(repeating:count:) does not work here!!!!!
         for _ in 0...4 {
             highScoreLabel.append(SKSpriteNode(texture: Score.scoreTexture.textureNamed("0")))
@@ -47,8 +41,7 @@ class Score {
         for i in 0..<currentScoreLabel.count {
             self.parentScene.addChild(currentScoreLabel[i])
         }
-        
-        isInitial = false
+
     }
     
     func updateHighScore() {
@@ -56,9 +49,7 @@ class Score {
         let highScoreArray = String(parentScene.highScore).digits
         if highScoreLabel.count < highScoreArray.count {
             highScoreLabel.insert(SKSpriteNode(texture: Score.scoreTexture.textureNamed("0")), at: 0)
-            if !isInitial {
-                parentScene.addChild(highScoreLabel[0])
-            }
+            parentScene.addChild(highScoreLabel[0])
             setPosition()
         }
         
@@ -73,9 +64,7 @@ class Score {
         let currentScoreArray = String(parentScene.currentScore).digits
         if currentScoreLabel.count < currentScoreArray.count {
             currentScoreLabel.insert(SKSpriteNode(texture: Score.scoreTexture.textureNamed("0")), at: 0)
-            if !isInitial {
-                parentScene.addChild(currentScoreLabel[0])
-            }
+            parentScene.addChild(currentScoreLabel[0])
             setPosition()
         }
         
