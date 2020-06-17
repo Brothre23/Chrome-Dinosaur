@@ -15,8 +15,9 @@ class Score {
     var hiLabel: SKSpriteNode!
     var highScoreLabel: [SKSpriteNode] = []
     var currentScoreLabel: [SKSpriteNode] = []
-    
-    var labelHeight: CGFloat!
+    var currentScoreNode: SKNode!
+    var highScoreNode: SKNode!
+    var scoreFlashing: Bool!
     
     var parentScene: GameScene!
     
@@ -31,16 +32,25 @@ class Score {
             currentScoreLabel.append(SKSpriteNode(texture: Score.scoreTexture.textureNamed("0")))
         }
         
-        labelHeight = parentScene.size.height - 110.5
+        scoreFlashing = false
+        
+        currentScoreNode = SKNode()
+        currentScoreNode.position = CGPoint(x: parentScene.size.width - 150, y: parentScene.size.height - 50)
+        highScoreNode = SKNode()
+        highScoreNode.position = CGPoint(x: currentScoreNode.position.x - 120, y: parentScene.size.height - 50)
+        
         setPosition()
         
-        self.parentScene.addChild(hiLabel)
+        highScoreNode.addChild(hiLabel)
         for i in 0..<highScoreLabel.count {
-            self.parentScene.addChild(highScoreLabel[i])
+            highScoreNode.addChild(highScoreLabel[i])
         }
         for i in 0..<currentScoreLabel.count {
-            self.parentScene.addChild(currentScoreLabel[i])
+            currentScoreNode.addChild(currentScoreLabel[i])
         }
+        
+        parentScene.addChild(currentScoreNode)
+        parentScene.addChild(highScoreNode)
 
     }
     
@@ -49,7 +59,7 @@ class Score {
         let highScoreArray = String(parentScene.highScore).digits
         if highScoreLabel.count < highScoreArray.count {
             highScoreLabel.insert(SKSpriteNode(texture: Score.scoreTexture.textureNamed("0")), at: 0)
-            parentScene.addChild(highScoreLabel[0])
+            highScoreNode.addChild(highScoreLabel[0])
             setPosition()
         }
         
@@ -64,7 +74,7 @@ class Score {
         let currentScoreArray = String(parentScene.currentScore).digits
         if currentScoreLabel.count < currentScoreArray.count {
             currentScoreLabel.insert(SKSpriteNode(texture: Score.scoreTexture.textureNamed("0")), at: 0)
-            parentScene.addChild(currentScoreLabel[0])
+            currentScoreNode.addChild(currentScoreLabel[0])
             setPosition()
         }
         
@@ -80,19 +90,33 @@ class Score {
         }
     }
     
+    func flash() {
+
+        let setInvisible = SKAction.fadeOut(withDuration: 0.2)
+        let setVisible = SKAction.fadeIn(withDuration: 0.2)
+        
+        let flashAction = SKAction.repeat(SKAction.sequence([setInvisible, setVisible]), count: 3)
+        
+        self.currentScoreNode.run(flashAction) {
+            self.scoreFlashing.toggle()
+        }
+    }
+    
     func setPosition() {
         
-        currentScoreLabel.last!.position = CGPoint(x: parentScene.size.width - 109, y: labelHeight)
+        currentScoreLabel.last!.position = CGPoint(x: 100, y: 0)
         for i in (0...currentScoreLabel.count - 2).reversed() {
-            currentScoreLabel[i].position = CGPoint(x: currentScoreLabel[i + 1].position.x - 20, y: labelHeight)
+            currentScoreLabel[i].position = CGPoint(x: currentScoreLabel[i + 1].position.x - 20, y: 0)
         }
         
-        highScoreLabel.last!.position = CGPoint(x: currentScoreLabel.first!.position.x - 50, y: labelHeight)
+        highScoreNode.position = CGPoint(x: currentScoreNode.position.x - 120, y: parentScene.size.height - 50)
+        
+        highScoreLabel.last!.position = CGPoint(x: 100, y: 0)
         for i in (0...highScoreLabel.count - 2).reversed() {
-            highScoreLabel[i].position = CGPoint(x: highScoreLabel[i + 1].position.x - 20, y: labelHeight)
+            highScoreLabel[i].position = CGPoint(x: highScoreLabel[i + 1].position.x - 20, y: 0)
         }
         
-        hiLabel.position = CGPoint(x: highScoreLabel[0].position.x - 50, y: labelHeight)
+        hiLabel.position = CGPoint(x: highScoreLabel[0].position.x - 50, y: 0)
     }
 
 }

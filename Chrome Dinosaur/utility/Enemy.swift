@@ -26,7 +26,7 @@ class Enemy: SKSpriteNode {
         case big_4
     }
     
-    init(type: String) {
+    init(_ type: String) {
         let texture = Enemy.enemyTexture.textureNamed("Sprite")
         super.init(texture: texture, color: UIColor.clear, size: texture.size())
         
@@ -37,29 +37,20 @@ class Enemy: SKSpriteNode {
             switch randomCactus {
             case .small_1:
                 tempTexture = Enemy.enemyTexture.textureNamed("cactus_small_1.png")
-                self.texture = tempTexture
-                self.size = tempTexture.size()
             case .small_2:
                 tempTexture = Enemy.enemyTexture.textureNamed("cactus_small_2.png")
-                self.texture = tempTexture
-                self.size = tempTexture.size()
             case .small_3:
                 tempTexture = Enemy.enemyTexture.textureNamed("cactus_small_3.png")
-                self.texture = tempTexture
-                self.size = tempTexture.size()
             case .big_1:
                 tempTexture = Enemy.enemyTexture.textureNamed("cactus_big_1.png")
-                self.texture = tempTexture
-                self.size = tempTexture.size()
             case .big_2:
                 tempTexture = Enemy.enemyTexture.textureNamed("cactus_big_2.png")
-                self.texture = tempTexture
-                self.size = tempTexture.size()
             case .big_4:
                 tempTexture = Enemy.enemyTexture.textureNamed("cactus_big_4.png")
-                self.texture = tempTexture
-                self.size = tempTexture.size()
             }
+            self.texture = tempTexture
+            self.size = tempTexture.size()
+            
             self.physicsBody = SKPhysicsBody(rectangleOf: CGSize(width: self.size.width, height: self.size.height))
             self.physicsBody?.categoryBitMask = Enemy.landEnemyCategory
             
@@ -87,6 +78,7 @@ class Enemy: SKSpriteNode {
         self.physicsBody?.affectedByGravity = false
         self.physicsBody?.contactTestBitMask = Enemy.characterCategory
         self.physicsBody?.collisionBitMask = 0
+        self.zPosition = 0
         self.name = "enemy"
     }
     
