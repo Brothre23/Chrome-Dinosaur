@@ -36,8 +36,11 @@ class Score {
         
         currentScoreNode = SKNode()
         currentScoreNode.position = CGPoint(x: parentScene.size.width - 150, y: parentScene.size.height - 50)
+        currentScoreNode.zPosition = 0
+        
         highScoreNode = SKNode()
         highScoreNode.position = CGPoint(x: currentScoreNode.position.x - 120, y: parentScene.size.height - 50)
+        highScoreNode.zPosition = 0
         
         setPosition()
         

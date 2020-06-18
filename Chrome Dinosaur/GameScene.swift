@@ -18,18 +18,20 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
     
     var jumpPlayer: AVAudioPlayer!
     var deadPlayer: AVAudioPlayer!
+    var reachPlayer: AVAudioPlayer!
     
     var tapRecognizer: UITapGestureRecognizer!
     var swipeUpRecognizer: UISwipeGestureRecognizer!
     var swipeDownRecognizer: UISwipeGestureRecognizer!
     
-    var moveSpeed:CGFloat!
-    var enemyType:Bool!
-    var lastTouchTime:CFTimeInterval!
-    var lastEnemyTime:CFTimeInterval!
+    var moveSpeed: CGFloat!
+    var enemyType: Bool!
+    var lastTouchTime: CFTimeInterval!
+    var lastEnemyTime: CFTimeInterval!
+    var lastCloudTime: CFTimeInterval!
     var lastScoreUpdateTime: CFTimeInterval!
     var enemyWaitTime: Double!
-    var currentWalkingMode:WalkingMode!
+    var currentWalkingMode: WalkingMode!
     
     static let characterCategory: UInt32 = 0x1 << 0
     static let flyingEnemyCategory: UInt32 = 0x1 << 1
@@ -44,10 +46,11 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
     var normalWalkForever:SKAction!
     var downWalkForever:SKAction!
     
-    enum WalkingMode {
-        case normal
-        case down
-    }
+    var backgroundNode: SKSpriteNode!
+    var currentColor: BackgroundColor!
+    var colorChanging: Bool!
+    var changeToGray: SKAction!
+    var changeToWhite: SKAction!
     
     func setupDinosaur() {
         let normalWalkOnce = SKAction.animate(with: [GameScene.dinoTexture.textureNamed("normal_1.png"), GameScene.dinoTexture.textureNamed("normal_2.png")], timePerFrame: 0.1, resize: true, restore: false)
@@ -59,7 +62,7 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
         dinosaur = SKSpriteNode(texture: GameScene.dinoTexture.textureNamed("normal_1.png"))
         dinosaur.name = "dinosaur"
         dinosaur.setPhysics(x: 100, y: landscape.size.height / 4 + dinosaur.size.height / 2, name: "normal_1")
-        dinosaur.zPosition = 10
+        dinosaur.zPosition = 15
         
         dinosaur.run(normalWalkForever)
     }
@@ -70,13 +73,12 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
     
     override init(size: CGSize) {
         super.init(size: size)
-        // self.backgroundColor = SKColor(displayP3Red: 0.5, green: 0.5, blue: 0.5, alpha: 1.0)
-        self.backgroundColor = SKColor.gray
         self.physicsWorld.contactDelegate = self
         
         do {
             jumpPlayer = try AVAudioPlayer(contentsOf: Bundle.main.url(forResource: "jump", withExtension: "mp3", subdirectory: "bgm")!)
             deadPlayer = try AVAudioPlayer(contentsOf: Bundle.main.url(forResource: "dead", withExtension: "mp3", subdirectory: "bgm")!)
+            reachPlayer = try AVAudioPlayer(contentsOf: Bundle.main.url(forResource: "reach", withExtension: "mp3", subdirectory: "bgm")!)
         } catch {
             print(error.localizedDescription)
         }
@@ -84,9 +86,16 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
         moveSpeed = 10
         lastTouchTime = 0
         lastEnemyTime = 0
+        lastCloudTime = 0
         lastScoreUpdateTime = CACurrentMediaTime()
         currentScore = 0
         currentWalkingMode = .normal
+        
+        currentColor = .white
+        backgroundNode = SKSpriteNode(color: UIColor.white, size: CGSize(width: self.size.width * 2, height: self.size.height * 2))
+        colorChanging = false
+        changeToGray = SKAction.colorize(with: UIColor.gray, colorBlendFactor: 1.0, duration: 0.5)
+        changeToWhite = SKAction.colorize(with: UIColor.white, colorBlendFactor: 1.0, duration: 0.5)
         
         userDefault = UserDefaults()
         highScore = userDefault.integer(forKey: "high score")
@@ -107,6 +116,8 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
         
         score.updateHighScore()
         
+        self.addChild(backgroundNode)
+        
         tapRecognizer = UITapGestureRecognizer(target: self, action: #selector(GameScene.tapHandler(recognizer:)))
         view.addGestureRecognizer(tapRecognizer)
         
@@ -118,7 +129,7 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
         swipeDownRecognizer.direction = .down
         view.addGestureRecognizer(swipeDownRecognizer)
         
-        self.isPaused = false
+        isPaused = false
     }
     
     override func update(_ currentTime: TimeInterval) {
@@ -131,17 +142,29 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
 
             if self.enemyType {
                 enemy = Enemy("cactus")
-                enemy.position = CGPoint(x: self.size.width + enemy.size.width / 2, y: self.landscape.size.height / 4 + enemy.size.height / 2)
+                enemy.position = CGPoint(x: self.size.width + enemy.size.width / 2, y: landscape.size.height / 4 + enemy.size.height / 2)
             }
             else {
                 enemy = Enemy("bird")
-                let yPosition = CGFloat.random(in: self.landscape.size.height + enemy.size.height / 2...self.size.height / 2 - enemy.size.height / 2)
+                let yPosition = CGFloat.random(in: landscape.size.height + enemy.size.height / 2...self.size.height / 2 - enemy.size.height / 2)
                 enemy.position = CGPoint(x: self.size.width + enemy.size.width / 2, y: yPosition)
             }
             
             self.addChild(enemy)
 
             lastEnemyTime = currentTime
+        }
+        
+        if currentTime - lastCloudTime > 5 {
+            let cloud = SKSpriteNode(imageNamed: "cloud")
+            let yPosition = CGFloat.random(in: self.size.height / 2 + cloud.size.height / 2...self.size.height - cloud.size.height / 2)
+            cloud.position = CGPoint(x: self.size.width + cloud.size.width / 2, y: yPosition)
+            cloud.zPosition = 5
+            
+            cloud.name = "cloud"
+            self.addChild(cloud)
+            
+            lastCloudTime = currentTime
         }
         
         if currentTime - lastScoreUpdateTime > 0.1 {
@@ -154,8 +177,27 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
         }
         
         if !score.scoreFlashing && currentScore > 0 && currentScore.isMultiple(of: 500) {
+            reachPlayer.play()
             score.scoreFlashing.toggle()
             score.flash()
+        }
+        
+        if !colorChanging && currentScore > 0 && currentScore.isMultiple(of: 1000) {
+            colorChanging.toggle()
+            switch currentColor {
+            case .white:
+                currentColor = .gray
+                backgroundNode.run(changeToGray) {
+                    self.colorChanging.toggle()
+                }
+            case .gray:
+                currentColor = .white
+                backgroundNode.run(changeToWhite) {
+                    self.colorChanging.toggle()
+                }
+            default:
+                break
+            }
         }
         
         self.enumerateChildNodes(withName: "landscape") {
@@ -179,6 +221,17 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
                 enemy.removeFromParent()
             }
         }
+        
+        self.enumerateChildNodes(withName: "cloud") {
+            (node, _) in
+            
+            let cloud = node as! SKSpriteNode
+            cloud.position.x -= self.moveSpeed / 2
+            
+            if cloud.position.x <= -cloud.size.width / 2 {
+                cloud.removeFromParent()
+            }
+        }
     }
     
     @objc func tapHandler(recognizer: UITapGestureRecognizer){
@@ -198,43 +251,44 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
             let jumpDown = SKAction.moveBy(x: 0, y: -150, duration: 0.3)
             
             dinosaur.removeAllActions()
-            dinosaur.run(SKAction.sequence([setJumpTexture, jumpUp, jumpDown, setWalkTexture, normalWalkForever]))
+            dinosaur.run(SKAction.sequence([setJumpTexture, jumpUp, jumpDown, setWalkTexture])) {
+                self.dinosaur.run(self.normalWalkForever)
+            }
         }
         else {
             let positionInScene = convertPoint(fromView: recognizer.location(in: view))
             let touchedNode = self.nodes(at: positionInScene)
             
-            if !touchedNode.isEmpty
+            if !touchedNode.isEmpty && touchedNode[0].name == "GG"
             {
-                if touchedNode[0].name == "GG" {
-                    
-                    self.enumerateChildNodes(withName: "GG") {
-                        (node, _) in
-                        node.removeFromParent()
-                    }
-                    
-                    self.enumerateChildNodes(withName: "enemy") {
-                        (node, _) in
-                        node.removeFromParent()
-                    }
-                    
-                    currentWalkingMode = .normal
-                    
-                    currentScore = 0
-                    score.updateHighScore()
-                    score.reset()
-                    
-                    lastScoreUpdateTime = CACurrentMediaTime()
-                    moveSpeed = 10
-                    
-                    dinosaur.position = CGPoint(x: 100, y: landscape.size.height / 4 + dinosaur.size.height / 2)
-                    dinosaur.run(normalWalkForever)
-                    
-                    self.isPaused.toggle()
+                self.enumerateChildNodes(withName: "GG") {
+                    (node, _) in
+                    node.removeFromParent()
                 }
-                else {
-                    return
+                
+                self.enumerateChildNodes(withName: "enemy") {
+                    (node, _) in
+                    node.removeFromParent()
                 }
+                
+                currentWalkingMode = .normal
+                
+                currentScore = 0
+                score.updateHighScore()
+                score.reset()
+                
+                lastScoreUpdateTime = CACurrentMediaTime()
+                moveSpeed = 10
+                
+                dinosaur.position = CGPoint(x: 100, y: landscape.size.height / 4 + dinosaur.size.height / 2)
+                dinosaur.run(normalWalkForever)
+                
+                if currentColor == .gray {
+                    backgroundNode.run(changeToWhite)
+                    currentColor = .white
+                }
+                
+                self.isPaused.toggle()
             }
             else {
                 return

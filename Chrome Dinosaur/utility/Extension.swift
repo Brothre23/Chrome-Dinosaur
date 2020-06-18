@@ -8,6 +8,16 @@
 
 import SpriteKit
 
+enum WalkingMode {
+    case normal
+    case down
+}
+
+enum BackgroundColor {
+    case white
+    case gray
+}
+
 extension String {
     var digits: [Int] { self.compactMap{ $0.wholeNumberValue } }
 }

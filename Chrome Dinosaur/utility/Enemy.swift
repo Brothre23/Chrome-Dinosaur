@@ -78,7 +78,7 @@ class Enemy: SKSpriteNode {
         self.physicsBody?.affectedByGravity = false
         self.physicsBody?.contactTestBitMask = Enemy.characterCategory
         self.physicsBody?.collisionBitMask = 0
-        self.zPosition = 0
+        self.zPosition = 10
         self.name = "enemy"
     }
     
