@@ -10,7 +10,7 @@ import UIKit
 import SpriteKit
 
 class GameViewController: UIViewController {
-    var scene: GameScene!
+    var scene: StartScene!
     
     override var prefersStatusBarHidden: Bool {
         return true
@@ -26,7 +26,7 @@ class GameViewController: UIViewController {
         skView.showsNodeCount = true
         // skView.showsPhysics = true
         
-        scene = GameScene(size: skView.frame.size)
+        scene = StartScene(size: skView.frame.size)
         scene.scaleMode = .aspectFill
         
         skView.presentScene(scene)
