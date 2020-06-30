@@ -9,8 +9,23 @@
 import UIKit
 import SpriteKit
 
-class GameViewController: UIViewController {
-    var scene: StartScene!
+class GameViewController: UIViewController, ChangeSceneDelegate {
+    
+    var skView: SKView!
+    
+    func changeToGameScene(_ size: CGSize, _ characterType: String) {
+        let scene = GameScene(size, characterType)
+        scene.scaleMode = .aspectFit
+        scene.changeSceneDelegate = self
+        skView.presentScene(scene)
+    }
+    
+    func changeToStartScene(_ size: CGSize) {
+        let scene = StartScene(size: size)
+        scene.scaleMode = .aspectFit
+        scene.changeSceneDelegate = self
+        skView.presentScene(scene, transition: SKTransition.push(with: SKTransitionDirection.down, duration: 1))
+    }
     
     override var prefersStatusBarHidden: Bool {
         return true
@@ -20,15 +35,15 @@ class GameViewController: UIViewController {
         
         super.viewDidLoad()
         
-        let skView = view as! SKView
+        skView = (view as! SKView)
         skView.ignoresSiblingOrder = true
-        skView.showsFPS = true
-        skView.showsNodeCount = true
+        // skView.showsFPS = true
+        // skView.showsNodeCount = true
         // skView.showsPhysics = true
         
-        scene = StartScene(size: skView.frame.size)
+        let scene = StartScene(size: skView.frame.size)
         scene.scaleMode = .aspectFill
-        
+        scene.changeSceneDelegate = self
         skView.presentScene(scene)
     }
 }

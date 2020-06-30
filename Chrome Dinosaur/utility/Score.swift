@@ -19,11 +19,11 @@ class Score {
     var highScoreNode: SKNode!
     var scoreFlashing: Bool!
     
-    var parentScene: GameScene!
+    var parentSize: CGSize!
     
-    init(parentScene: GameScene) {
+    init(parentSize: CGSize) {
         
-        self.parentScene = parentScene
+        self.parentSize = parentSize
         
         hiLabel = SKSpriteNode(texture: Score.scoreTexture.textureNamed("HI"))
         // init(repeating:count:) does not work here!!!!!
@@ -35,11 +35,11 @@ class Score {
         scoreFlashing = false
         
         currentScoreNode = SKNode()
-        currentScoreNode.position = CGPoint(x: parentScene.size.width - 150, y: parentScene.size.height - 50)
+        currentScoreNode.position = CGPoint(x: parentSize.width - 150, y: parentSize.height - 50)
         currentScoreNode.zPosition = 0
         
         highScoreNode = SKNode()
-        highScoreNode.position = CGPoint(x: currentScoreNode.position.x - 120, y: parentScene.size.height - 50)
+        highScoreNode.position = CGPoint(x: currentScoreNode.position.x - 120, y: parentSize.height - 50)
         highScoreNode.zPosition = 0
         
         setPosition()
@@ -51,15 +51,12 @@ class Score {
         for i in 0..<currentScoreLabel.count {
             currentScoreNode.addChild(currentScoreLabel[i])
         }
-        
-        parentScene.addChild(currentScoreNode)
-        parentScene.addChild(highScoreNode)
 
     }
     
-    func updateHighScore() {
+    func updateHighScore(_ highScore: Int) {
         
-        let highScoreArray = String(parentScene.highScore).digits
+        let highScoreArray = String(highScore).digits
         if highScoreLabel.count < highScoreArray.count {
             highScoreLabel.insert(SKSpriteNode(texture: Score.scoreTexture.textureNamed("0")), at: 0)
             highScoreNode.addChild(highScoreLabel[0])
@@ -72,9 +69,9 @@ class Score {
         
     }
     
-    func updateScore() {
+    func updateScore(_ currentScore: Int) {
         
-        let currentScoreArray = String(parentScene.currentScore).digits
+        let currentScoreArray = String(currentScore).digits
         if currentScoreLabel.count < currentScoreArray.count {
             currentScoreLabel.insert(SKSpriteNode(texture: Score.scoreTexture.textureNamed("0")), at: 0)
             currentScoreNode.addChild(currentScoreLabel[0])
@@ -112,7 +109,7 @@ class Score {
             currentScoreLabel[i].position = CGPoint(x: currentScoreLabel[i + 1].position.x - 20, y: 0)
         }
         
-        highScoreNode.position = CGPoint(x: currentScoreNode.position.x - 120, y: parentScene.size.height - 50)
+        highScoreNode.position = CGPoint(x: currentScoreNode.position.x - 120, y: parentSize.height - 50)
         
         highScoreLabel.last!.position = CGPoint(x: 100, y: 0)
         for i in (0...highScoreLabel.count - 2).reversed() {

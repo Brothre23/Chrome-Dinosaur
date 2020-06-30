@@ -12,9 +12,11 @@ import AVFoundation
 
 class GameScene: SKScene, SKPhysicsContactDelegate {
     
-    static let dinoTexture:SKTextureAtlas = SKTextureAtlas(named: "dinosaur")
-    var landscape:SKSpriteNode!
-    var dinosaur:SKSpriteNode!
+    static var dinoTexture: SKTextureAtlas!
+    var landscape: SKSpriteNode!
+    var dinosaur: SKSpriteNode!
+    
+    var characterType: String!
     
     var jumpPlayer: AVAudioPlayer!
     var deadPlayer: AVAudioPlayer!
@@ -37,6 +39,11 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
     static let flyingEnemyCategory: UInt32 = 0x1 << 1
     static let landEnemyCategory: UInt32 = 0x1 << 2
     
+    var setJumpTexture: SKAction!
+    var setWalkTexture: SKAction!
+    var jumpUp: SKAction!
+    var jumpDown: SKAction!
+    
     var currentScore: Int!
     var highScore: Int!
     
@@ -52,16 +59,18 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
     var changeToGray: SKAction!
     var changeToWhite: SKAction!
     
+    var changeSceneDelegate: ChangeSceneDelegate?
+    
     func setupDinosaur() {
-        let normalWalkOnce = SKAction.animate(with: [GameScene.dinoTexture.textureNamed("normal_1.png"), GameScene.dinoTexture.textureNamed("normal_2.png")], timePerFrame: 0.1, resize: true, restore: false)
+        let normalWalkOnce = SKAction.animate(with: [GameScene.dinoTexture.textureNamed(characterType + "_normal_1.png"), GameScene.dinoTexture.textureNamed(characterType + "_normal_2.png")], timePerFrame: 0.1, resize: true, restore: false)
         normalWalkForever = SKAction.repeatForever(normalWalkOnce)
 
-        let downWalkOnce = SKAction.animate(with: [GameScene.dinoTexture.textureNamed("down_1.png"), GameScene.dinoTexture.textureNamed("down_2.png")], timePerFrame: 0.1, resize: true, restore: false)
+        let downWalkOnce = SKAction.animate(with: [GameScene.dinoTexture.textureNamed(characterType + "_down_1.png"), GameScene.dinoTexture.textureNamed(characterType + "_down_2.png")], timePerFrame: 0.1, resize: true, restore: false)
         downWalkForever = SKAction.repeatForever(downWalkOnce)
         
-        dinosaur = SKSpriteNode(texture: GameScene.dinoTexture.textureNamed("normal_1.png"))
+        dinosaur = SKSpriteNode(texture: GameScene.dinoTexture.textureNamed(characterType + "_normal_1.png"))
         dinosaur.name = "dinosaur"
-        dinosaur.setPhysics(x: 100, y: landscape.size.height / 4 + dinosaur.size.height / 2, name: "normal_1")
+        dinosaur.setPhysics(x: 100, y: landscape.size.height / 4 + dinosaur.size.height / 2, name: characterType + "_normal_1")
         dinosaur.zPosition = 15
         
         dinosaur.run(normalWalkForever)
@@ -99,7 +108,22 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
         
         userDefault = UserDefaults()
         highScore = userDefault.integer(forKey: "high score")
-        score = Score(parentScene: self)
+        score = Score(parentSize: self.size)
+        
+    }
+    
+    convenience init(_ size: CGSize, _ characterType: String) {
+        self.init(size: size)
+        self.characterType = characterType
+        
+        switch characterType {
+        case "dinosaur":
+            GameScene.dinoTexture = SKTextureAtlas(named: "dinosaur")
+        case "mario":
+            GameScene.dinoTexture = SKTextureAtlas(named: "mario")
+        default:
+            break
+        }
     }
     
     override func didMove(to view: SKView) {
@@ -111,10 +135,17 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
             self.addChild(landscape)
         }
         
+        setJumpTexture = SKAction.setTexture(GameScene.dinoTexture.textureNamed(characterType + "_jump.png"))
+        setWalkTexture = SKAction.setTexture(GameScene.dinoTexture.textureNamed(characterType + "_normal_2.png"))
+        jumpUp = SKAction.moveBy(x: 0, y: 150, duration: 0.3)
+        jumpDown = SKAction.moveBy(x: 0, y: -150, duration: 0.3)
+        
         setupDinosaur()
         self.addChild(dinosaur)
         
-        score.updateHighScore()
+        score.updateHighScore(highScore)
+        self.addChild(score.currentScoreNode)
+        self.addChild(score.highScoreNode)
         
         self.addChild(backgroundNode)
         
@@ -155,7 +186,7 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
             lastEnemyTime = currentTime
         }
         
-        if currentTime - lastCloudTime > 5 {
+        if currentTime - lastCloudTime > 4 {
             let cloud = SKSpriteNode(imageNamed: "cloud")
             let yPosition = CGFloat.random(in: self.size.height / 2 + cloud.size.height / 2...self.size.height - cloud.size.height / 2)
             cloud.position = CGPoint(x: self.size.width + cloud.size.width / 2, y: yPosition)
@@ -170,7 +201,7 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
         if currentTime - lastScoreUpdateTime > 0.1 {
             currentScore += 10
             if !score.scoreFlashing {
-                score.updateScore()
+                score.updateScore(currentScore)
             }
             moveSpeed += 0.02
             lastScoreUpdateTime = currentTime
@@ -186,13 +217,13 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
             colorChanging.toggle()
             switch currentColor {
             case .white:
-                currentColor = .gray
                 backgroundNode.run(changeToGray) {
+                    self.currentColor = .gray
                     self.colorChanging.toggle()
                 }
             case .gray:
-                currentColor = .white
                 backgroundNode.run(changeToWhite) {
+                    self.currentColor = .white
                     self.colorChanging.toggle()
                 }
             default:
@@ -245,11 +276,6 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
             
             lastTouchTime = CACurrentMediaTime()
             
-            let setJumpTexture = SKAction.setTexture(GameScene.dinoTexture.textureNamed("jump.png"))
-            let setWalkTexture = SKAction.setTexture(GameScene.dinoTexture.textureNamed("normal_2.png"))
-            let jumpUp = SKAction.moveBy(x: 0, y: 150, duration: 0.3)
-            let jumpDown = SKAction.moveBy(x: 0, y: -150, duration: 0.3)
-            
             dinosaur.removeAllActions()
             dinosaur.run(SKAction.sequence([setJumpTexture, jumpUp, jumpDown, setWalkTexture])) {
                 self.dinosaur.run(self.normalWalkForever)
@@ -274,7 +300,7 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
                 currentWalkingMode = .normal
                 
                 currentScore = 0
-                score.updateHighScore()
+                score.updateHighScore(highScore)
                 score.reset()
                 
                 lastScoreUpdateTime = CACurrentMediaTime()
@@ -283,15 +309,13 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
                 dinosaur.position = CGPoint(x: 100, y: landscape.size.height / 4 + dinosaur.size.height / 2)
                 dinosaur.run(normalWalkForever)
                 
-                if currentColor == .gray {
-                    backgroundNode.run(changeToWhite)
-                    currentColor = .white
-                }
+                backgroundNode.run(changeToWhite)
+                currentColor = .white
                 
                 self.isPaused.toggle()
             }
             else {
-                return
+                changeSceneDelegate?.changeToStartScene(self.size)
             }
         }
     }
@@ -303,7 +327,7 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
         }
 
         dinosaur.removeAllActions()
-        dinosaur.setPhysics(x: 100, y: landscape.size.height / 4 + GameScene.dinoTexture.textureNamed("normal_1").size().height / 2, name: "normal_1")
+        dinosaur.setPhysics(x: 100, y: landscape.size.height / 4 + GameScene.dinoTexture.textureNamed(characterType + "_normal_1.png").size().height / 2, name: characterType + "_normal_1")
         dinosaur.run(normalWalkForever)
         currentWalkingMode = .normal
     }
@@ -315,7 +339,7 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
         }
         
         dinosaur.removeAllActions()
-        dinosaur.setPhysics(x: 100, y: landscape.size.height / 4 + GameScene.dinoTexture.textureNamed("down_1").size().height / 2, name: "down_1")
+        dinosaur.setPhysics(x: 100, y: landscape.size.height / 4 + GameScene.dinoTexture.textureNamed(characterType + "_down_1.png").size().height / 2, name: characterType + "_down_1")
         dinosaur.run(downWalkForever)
         currentWalkingMode = .down
     }
@@ -332,14 +356,14 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
         restartLabel.name = "GG"
         
         dinosaur.removeAllActions()
-        dinosaur.texture = GameScene.dinoTexture.textureNamed("died.png")
-        dinosaur.size = CGSize(width: GameScene.dinoTexture.textureNamed("died.png").size().width, height: GameScene.dinoTexture.textureNamed("died.png").size().height)
+        dinosaur.texture = GameScene.dinoTexture.textureNamed(characterType + "_died.png")
+        dinosaur.size = CGSize(width: GameScene.dinoTexture.textureNamed(characterType + "_died.png").size().width, height: GameScene.dinoTexture.textureNamed(characterType + "_died.png").size().height)
         
         switch currentWalkingMode {
         case .down:
-            dinosaur.setPhysics(x: 100, y: landscape.size.height / 4 + dinosaur.size.height / 2, name: "died")
+            dinosaur.setPhysics(x: 100, y: landscape.size.height / 4 + dinosaur.size.height / 2, name: characterType + "_died")
         case .normal:
-            dinosaur.setPhysics(x: dinosaur.position.x, y: dinosaur.position.y, name: "died")
+            dinosaur.setPhysics(x: dinosaur.position.x, y: dinosaur.position.y, name: characterType + "_died")
         default:
             break
         }
